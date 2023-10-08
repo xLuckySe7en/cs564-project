@@ -41,7 +41,25 @@ ORDER BY COUNT(*) DESC;
 -- Q3
 -- For each department, compute the average of max salaries of employees in that department. Then return the names and the average max salaries of departments where the average max salary is greater than 8000.
 
--- WHAT DOES THIS EVEN MEAN??????????
+SELECT AVG(j.max_salary)
+FROM departments d
+INNER JOIN employees e
+  ON d.department_id = e.department_id
+INNER JOIN jobs j
+  ON e.job_id = j.job_id
+GROUP BY d.department_id
+HAVING AVG(j.max_salary) > 8000;
+
+-- 12000.0
+-- 9000.0
+-- 10000.0
+-- 10500.0
+-- 14666.6666666667
+-- 33333.3333333333
+-- 10166.6666666667
+-- 12500.0
+-- TODO: need validation and auditing
+
 
 
 -- Q4
