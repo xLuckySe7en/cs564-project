@@ -4,6 +4,7 @@
 -- TODO: python validation
 
 -- Q1
+-- clarification: https://piazza.com/class/lm89trv0gfv1yl/post/64
 
 SELECT DISTINCT job_title
 FROM jobs
@@ -24,7 +25,6 @@ INNER JOIN departments d
   ON e.department_id = d.department_id
 GROUP BY e.department_id
 ORDER BY COUNT(*) DESC;
-
 -- Shipping,7
 -- Finance,6
 -- Sales,6
@@ -39,9 +39,9 @@ ORDER BY COUNT(*) DESC;
 
 
 -- Q3
--- For each department, compute the average of max salaries of employees in that department. Then return the names and the average max salaries of departments where the average max salary is greater than 8000.
+-- clarification: https://piazza.com/class/lm89trv0gfv1yl/post/68
 
-SELECT AVG(j.max_salary)
+SELECT d.department_name, AVG(j.max_salary)
 FROM departments d
 INNER JOIN employees e
   ON d.department_id = e.department_id
@@ -49,16 +49,14 @@ INNER JOIN jobs j
   ON e.job_id = j.job_id
 GROUP BY d.department_id
 HAVING AVG(j.max_salary) > 8000;
-
--- 12000.0
--- 9000.0
--- 10000.0
--- 10500.0
--- 14666.6666666667
--- 33333.3333333333
--- 10166.6666666667
--- 12500.0
--- TODO: need validation and auditing
+-- Marketing|12000.0
+-- Human Resources|9000.0
+-- IT|10000.0
+-- Public Relations|10500.0
+-- Sales|14666.6666666667
+-- Executive|33333.3333333333
+-- Finance|10166.6666666667
+-- Accounting|12500.0
 
 
 
