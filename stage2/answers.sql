@@ -1,6 +1,5 @@
 -- terrible confusing statements everywhere. :X
 -- TODO: ask for clarification in person in OH
--- TODO: Q3, Q7 clarification
 -- TODO: python validation
 
 -- Q1
@@ -112,6 +111,7 @@ WHERE e.department_id = d.department_id
 -- output 8
 
 -- Q7
+-- https://piazza.com/class/lm89trv0gfv1yl/post/66
 
 SELECT e1.first_name, e2.first_name
 FROM employees e1, employees e2
@@ -122,11 +122,9 @@ WHERE e1.employee_id <> e2.employee_id
   AND e2.salary > 10000
   AND e1.salary >= e2.salary;
 
--- **Q** By saying "have a salary exceeding 10000". Do we mean that both salaries should greater than 10000 or at least one is greater than 10000?
--- **Q** Do we want pairs of distinct employees? Or pairs of identical employees are allowed?
--- **Q** Should we have both `(p,q)` and `(q,p)` in the output if both of the pairs satisfy the conditions?
--- **Q** if employee a has salary 1000k, and employee b have salary 1000k
--- then (a,b) and (b,a) are both returned?
+-- Neena|Lex
+-- Lex|Neena
+-- John|Karen
 
 -- Q8
 
