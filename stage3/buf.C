@@ -1,4 +1,5 @@
 #include "buf.h"
+#include "error.h"
 #include "page.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -8,14 +9,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define ASSERT(c)                                                              \
-  {                                                                            \
-    if (!(c)) {                                                                \
-      cerr << "At line " << __LINE__ << ":" << endl << "  ";                   \
-      cerr << "This condition should hold: " #c << endl;                       \
-      exit(1);                                                                 \
+
+// if error condition is met, trigger an early return with a specified error
+#define ERR_RET(cond, err)                                                     \
+  do {                                                                         \
+    if ((cond)) {                                                              \
+      return (err);                                                            \
     }                                                                          \
-  }
+  } while (0)
 
 //----------------------------------------
 // Constructor of the class BufMgr
