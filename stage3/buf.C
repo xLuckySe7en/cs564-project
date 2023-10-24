@@ -61,7 +61,48 @@ BufMgr::~BufMgr() {
   delete hashTable;
 }
 
-const Status BufMgr::allocBuf(int &frame) {}
+// \@brief: Use the clock algorithm to allocate a frame in the frame buffer pool
+// \@parm: The allocated frame number is passed through the frame reference.
+// \@error:
+// BUFFEREXCEEDED: if all pages in the buffer are pinned
+// UNIXERR: if when error occurred when write back dirty page
+const Status BufMgr::allocBuf(int &frame) {
+  // run for 2 rounds is sufficient to allocate a frame if it is possible.
+  for (int _runs = 0; _runs < 2; _runs++) {
+    for (int _i = 0; _i < numBufs; _i++) {
+      BufDesc &bd = bufTable[clockHand++];
+      clockHand %= numBufs;
+
+      if (bd.valid) {
+        // a pinned page (currently being used) do not evict it
+        if (bd.pinCnt > 0) {
+          continue;
+        }
+        // a recently used page, give it a second chance
+        if (bd.refbit) {
+          bd.refbit = false;
+          continue;
+        }
+        // on evicting a dirty page: write back to disk
+        if (bd.dirty) {
+          bd.dirty = false;
+          ERR_RET(bd.file->writePage(bd.pageNo, bufPool + bd.frameNo) != OK,
+                  UNIXERR);
+          bufStats.accesses++;
+          bufStats.diskwrites++;
+          bufStats.accesses++;
+        }
+        // hash table maintenance
+        ASSERT(hashTable->remove(bd.file, bd.pageNo) == OK);
+      }
+      // prepare the buffer description
+      frame = bd.frameNo;
+      bd.Clear();
+      return OK;
+    }
+  }
+  return BUFFEREXCEEDED;
+}
 
 const Status BufMgr::readPage(File *file, const int PageNo, Page *&page) {}
 
