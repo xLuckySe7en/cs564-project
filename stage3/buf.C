@@ -57,6 +57,7 @@ BufMgr::~BufMgr() {
 
   delete[] bufTable;
   delete[] bufPool;
+  delete hashTable;
 }
 
 const Status BufMgr::allocBuf(int &frame) {}
