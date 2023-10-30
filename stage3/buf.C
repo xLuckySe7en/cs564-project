@@ -72,22 +72,22 @@ const Status BufMgr::allocPage(File *file, int &pageNo, Page *&page) {
   if (file == nullptr)
     return UNIXERR;
   auto status = file->allocatePage(pageNo);
-  if (status != Status::OK) {
+  if (status != OK) 
     return status;
-  }
+  
   int frameNo = -1;
   //obtain a buffer pool frame
   status = allocBuf(frameNo);
-  if (status != OK) {
+  if (status != OK) 
     return status;
-  }
+  
   //an entry is inserted into the hash table
   if (hashTable == nullptr)
     return HASHTBLERROR;
   status = hashTable->insert(file, pageNo, frameNo);
-  if (status != OK) {
+  if (status != OK)
     return status;
-  }
+  
   //The BufDesc class is used to keep track of the state of each frame in the buffer pool.
   //thus we have to update the correct frame
   //in the buff table
