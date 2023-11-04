@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include <utility>
 
 // if error condition is met, trigger an early return with a specified error
 #define ERR_RET(cond, err)                                                     \
@@ -61,6 +61,109 @@ BufMgr::~BufMgr() {
   delete hashTable;
 }
 
+template <typename T> struct Range {
+  const T left, right;
+  struct Iterator {
+    T cur;
+    const T end;
+    bool valid() const { return cur < end; }
+    void next() { cur++; }
+  };
+  Iterator iter() const { return Iterator{left, right}; }
+};
+enum IterStat {
+  ITER_STOP, // early return
+  ITER_CONT, // continue iterating
+  ITER_END,  // loop ended
+};
+// range over T
+// iteration function F: takes T, returns R
+template <typename T, typename F, typename R>
+std::pair<IterStat, R> ForEach(Range<T> rng, F iter, const R normal_end_ret) {
+  for (auto i = rng.iter(); i.valid(); i.next()) {
+    auto pr = iter(i.cur);
+    if (pr.first == ITER_STOP) {
+      return pr;
+    }
+  }
+  return std::make_pair(ITER_END, normal_end_ret);
+}
+template <typename GetFile, typename GetPageNo, typename GetFrameNo,
+          typename GetPin, typename GetDirty, typename GetValid,
+          typename GetRef, typename CallClear>
+class ClockIter {
+private:
+  GetFile getFile;
+  GetPageNo getPageNo;
+  GetFrameNo getFrameNo;
+  GetPin getPin;
+  GetDirty getDirty;
+  GetValid getValid;
+  GetRef getRef;
+  CallClear callClear;
+
+  const int frames;
+  unsigned int &hand;
+  BufDesc *bufDescs;
+  BufHashTbl *bufHash;
+  BufStats &bufStats;
+  Page *pool;
+
+  int &ret;
+
+public:
+  ClockIter(GetFile getFile, GetPageNo getPageNo, GetFrameNo getFrameNo,
+            GetPin getPin, GetDirty getDirty, GetValid getValid, GetRef getRef,
+            CallClear callClear, int frames, unsigned int &hand,
+            BufDesc *bufDescs, BufHashTbl *bufHash, BufStats &bufStats,
+            Page *pool, int &ret)
+      : getFile(getFile), getPageNo(getPageNo), getFrameNo(getFrameNo),
+        getPin(getPin), getDirty(getDirty), getValid(getValid), getRef(getRef),
+        callClear(callClear), frames(frames), hand(hand), bufDescs(bufDescs),
+        bufHash(bufHash), bufStats(bufStats), pool(pool), ret(ret) {}
+  std::pair<IterStat, Status> operator()(int) {
+    // try allocate the current frame
+    BufDesc &bd = bufDescs[hand++];
+    // advance clock hand
+    hand %= frames;
+
+    // Only check for valid page. Invalid ones can be directly used.
+    if (getValid(bd)) {
+      // a pinned page (currently being used) do not evict it
+      if (getPin(bd) != 0) {
+        // continue iteration: try next slot
+        return std::make_pair(ITER_CONT, OK);
+      }
+      // a recently used page, give it a second chance
+      if (getRef(bd)) {
+        getRef(bd) = false;
+        // continue iteration: try next slot
+        return std::make_pair(ITER_CONT, OK);
+      }
+
+      // past this line: this slot is available
+
+      // on evicting a dirty page: write back to disk
+      if (getDirty(bd)) {
+        getDirty(bd) = false;
+        ERR_RET(getFile(bd)->writePage(getPageNo(bd), pool + getFrameNo(bd)) !=
+                    OK,
+                std::make_pair(ITER_STOP, UNIXERR));
+        bufStats.accesses++;
+        bufStats.diskwrites++;
+        bufStats.accesses++;
+      }
+      // hash table maintenance
+      ASSERT(bufHash->remove(getFile(bd), getPageNo(bd)) == OK);
+    }
+    // prepare the buffer description
+    ret = getFrameNo(bd);
+    callClear(bd);
+    // stop iterator, we've prepared a buffer slot
+    return std::make_pair(ITER_STOP, OK);
+  }
+};
+
 // \@brief: Use the clock algorithm to allocate a frame in the frame buffer pool
 // \@parm: The allocated frame number is passed through the frame reference.
 // \@error:
@@ -68,40 +171,32 @@ BufMgr::~BufMgr() {
 // UNIXERR: if when error occurred when write back dirty page
 const Status BufMgr::allocBuf(int &frame) {
   // run for 2 rounds is sufficient to allocate a frame if it is possible.
-  for (int _runs = 0; _runs < 2; _runs++) {
-    for (int _i = 0; _i < numBufs; _i++) {
-      BufDesc &bd = bufTable[clockHand++];
-      clockHand %= numBufs;
+  return ForEach(
+             Range<int>{0, 2},
+             [this, &frame](int) {
+               auto getFile = [](BufDesc &bd) { return bd.file; };
+               auto getPageNo = [](BufDesc &bd) { return bd.pageNo; };
+               auto getFrameNo = [](BufDesc &bd) { return bd.frameNo; };
+               auto getPin = [](BufDesc &bd) { return bd.pinCnt; };
+               auto getDirty = [](BufDesc &bd) -> bool & { return bd.dirty; };
+               auto getValid = [](BufDesc &bd) { return bd.valid; };
+               auto getRef = [](BufDesc &bd) -> bool & { return bd.refbit; };
+               auto callClear = [](BufDesc &bd) { return bd.Clear(); };
 
-      if (bd.valid) {
-        // a pinned page (currently being used) do not evict it
-        if (bd.pinCnt > 0) {
-          continue;
-        }
-        // a recently used page, give it a second chance
-        if (bd.refbit) {
-          bd.refbit = false;
-          continue;
-        }
-        // on evicting a dirty page: write back to disk
-        if (bd.dirty) {
-          bd.dirty = false;
-          ERR_RET(bd.file->writePage(bd.pageNo, bufPool + bd.frameNo) != OK,
-                  UNIXERR);
-          bufStats.accesses++;
-          bufStats.diskwrites++;
-          bufStats.accesses++;
-        }
-        // hash table maintenance
-        ASSERT(hashTable->remove(bd.file, bd.pageNo) == OK);
-      }
-      // prepare the buffer description
-      frame = bd.frameNo;
-      bd.Clear();
-      return OK;
-    }
-  }
-  return BUFFEREXCEEDED;
+               return ForEach(Range<int>{0, numBufs},
+                              ClockIter<decltype(getFile), decltype(getPageNo),
+                                        decltype(getFrameNo), decltype(getPin),
+                                        decltype(getDirty), decltype(getValid),
+                                        decltype(getRef), decltype(callClear)>(
+                                  getFile, getPageNo, getFrameNo, getPin,
+                                  getDirty, getValid, getRef, callClear,
+                                  this->numBufs, this->clockHand,
+                                  this->bufTable, this->hashTable,
+                                  this->bufStats, this->bufPool, frame),
+                              OK);
+             },
+             BUFFEREXCEEDED)
+      .second;
 }
 
 const Status BufMgr::readPage(File *file, const int PageNo, Page *&page) {}
