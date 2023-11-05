@@ -286,7 +286,45 @@ const Status BufMgr::unPinPage(File *file, const int PageNo, const bool dirty) {
     return OK;
 }
 
-const Status BufMgr::allocPage(File *file, int &pageNo, Page *&page) {}
+/*
+    @param: file    A file pointer that we will use to allocate teh page into
+    @param pageNo   A reference int that we will return the page number of the newly
+                    alloced page
+    @param page     A pinter to the newly alloced page
+    @return A status indicating whether the operation finished successfully (OK) or
+            had some error associated with it (UNIXERROR/HASHTBLERROR/BUFFEREXCEEDED)
+*/
+const Status BufMgr::allocPage(File *file, int &pageNo, Page *&page) {
+  if (file == nullptr)
+    return UNIXERR;
+  auto status = file->allocatePage(pageNo);
+  if (status != OK)
+    return status;
+
+  int frameNo = -1;
+  // obtain a buffer pool frame
+  status = allocBuf(frameNo);
+  if (status != OK)
+    return status;
+
+  // an entry is inserted into the hash table
+  if (hashTable == nullptr)
+    return HASHTBLERROR;
+
+  status = hashTable->insert(file, pageNo, frameNo);
+  if (status != OK)
+    return status;
+
+  // The BufDesc class is used to keep track of the state of each frame in the
+  // buffer pool. thus we have to update the correct frame in the buff table
+  if (bufTable == nullptr) 
+    return UNIXERR;
+  
+  bufTable[frameNo].Set(file, pageNo);
+  // iffy on this line
+  page = &bufPool[pageNo];
+  return OK;
+}
 
 const Status BufMgr::disposePage(File *file, const int pageNo) {
   // see if it is in the buffer pool
