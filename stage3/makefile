@@ -9,10 +9,10 @@
 #
 
 LD =		ld
-LDFLAGS =	
+LDFLAGS =	-fsanitize=undefined -fsanitize=address
 
 CXX =           g++
-CXXFLAGS =	-g -Wall -Wextra
+CXXFLAGS =	-g -Wall -Wextra -Wno-ignored-qualifiers -fsanitize=undefined -fsanitize=address
 
 PURIFY =        purify -collector=/usr/ccs/bin/ld -g++
 
