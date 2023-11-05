@@ -1,14 +1,12 @@
-#include "buf.h"
-#include "error.h"
-#include "page.h"
+#include <memory.h>
+#include <unistd.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <iostream>
-#include <memory.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <utility>
+#include "page.h"
+#include "buf.h"
 
 // if error condition is met, trigger an early return with a specified error
 #define ERR_RET(cond, err)                                                     \
