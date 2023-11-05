@@ -328,7 +328,7 @@ const Status BufMgr::allocPage(File *file, int &pageNo, Page *&page) {
 
   bufTable[frameNo].Set(file, pageNo);
   // iffy on this line
-  page = &bufPool[pageNo];
+  page = &bufPool[frameNo];
   return OK;
 }
 
