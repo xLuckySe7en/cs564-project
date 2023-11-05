@@ -248,13 +248,6 @@ const Status BufMgr::readPage(File *file, const int pageNo, Page *&page) {
       // If insertion fails, return the error.
       return status;
     }
-
-    // Increment the pin count since the page is now being used.
-    bufTable[frameNo].pinCnt++;
-
-    // Set the reference bit.
-    bufTable[frameNo].refbit = true;
-
     return OK;
   } else {
     // If the lookup returned an error other than HASHNOTFOUND, return that
