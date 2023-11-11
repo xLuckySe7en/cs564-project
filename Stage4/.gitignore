@@ -1,3 +1,5 @@
+.cache/
+
 # the test entrance ELF executable
 testfile
 
