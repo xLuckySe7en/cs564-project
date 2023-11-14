@@ -53,6 +53,7 @@ const Status createHeapFile(const string fileName) {
   // so mark them dirty
   bufMgr->unPinPage(file, hdrPN, true);
   bufMgr->unPinPage(file, dataPN, true);
+  db.closeFile(file);
   return OK;
 }
 
