@@ -151,7 +151,9 @@ const Status HeapFile::getRecord(const RID &rid, Record &rec) {
   }
   curPageNo = -1, curPage = NULL, curDirtyFlag = false;
   // check if record id page number is valid
-  ERR_RET(rid.pageNo > headerPage->pageCnt, BADRID, {});
+  ERR_RET(rid.pageNo < headerPage->firstPage ||
+              rid.pageNo > headerPage->lastPage,
+          BADRID, {});
   curPageNo = rid.pageNo;
   // try to switch to that page
   ERR_RET((status = bufMgr->readPage(filePtr, rid.pageNo, curPage)) != OK,
