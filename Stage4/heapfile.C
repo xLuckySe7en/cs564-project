@@ -188,6 +188,13 @@ static inline bool operator==(const RID &l, const RID &r) {
 }
 static inline bool operator!=(const RID &l, const RID &r) { return !(l == r); }
 
+// @brief: continue linear scan on the heapfile,
+// attempting to find the next record that matches the filtering criterion.
+// @parameter: set outRid to the next matched record id if such record exists
+// @return: OK if we found a matched record,
+// FILEEOF if we cannot find such record before reaching the end of file.
+// @assumption: read/pin/unpin page always success.
+// current page is always pinned if exists.
 const Status HeapFileScan::scanNext(RID &outRid) {
   outRid = NULLRID;
   // no page? it must mean that we've reached the end
@@ -209,12 +216,14 @@ const Status HeapFileScan::scanNext(RID &outRid) {
   }
   // try find record on this page
   while (!endOfPage) {
+    // test the current record
     Record rec;
     curPage->getRecord(curRec, rec);
     if (matchRec(rec)) {
       outRid = curRec;
       return OK;
     }
+    // move on to the next record, if not reaching end of this page
     RID nextRid;
     if (curPage->nextRecord(curRec, nextRid) == OK) {
       curRec = nextRid;
@@ -225,16 +234,15 @@ const Status HeapFileScan::scanNext(RID &outRid) {
   // this page is exhausted, we must go to the next page
   bufMgr->unPinPage(filePtr, curPageNo, curDirtyFlag);
   curPage->getNextPage(curPageNo);
+  // switch to the next page: on error, curPage remains NULL
+  // if read success, the page should be pinned
   curPage = NULL;
   bufMgr->readPage(filePtr, curPageNo, curPage);
   curDirtyFlag = false;
   curRec = NULLRID;
-  // recursively scan next page
+  // recursively scan the next page
   return scanNext(outRid);
 }
-
-// returns pointer to the current record.  page is left pinned
-// and the scan logic is required to unpin the page
 
 const Status HeapFileScan::getRecord(Record &rec) {
   return curPage->getRecord(curRec, rec);
@@ -340,9 +348,16 @@ InsertFileScan::~InsertFileScan() {
   }
 }
 
-// Insert a record into the file
+// @brief: Insert a record into a heapfile
+// @parameter:
+// rec: the record data
+// outRid: store the record at at which this record is inserted
+// @return: status
+// OK if insert success
+// UNIXERR if page allocation, page read/write failed
 const Status InsertFileScan::insertRecord(const Record &rec, RID &outRid) {
   Status status;
+  // by default, we insert record at the end
   if (curPage == NULL) {
     curPageNo = headerPage->lastPage;
     ERR_RET((status = bufMgr->readPage(filePtr, curPageNo, curPage)) != OK,
@@ -355,12 +370,15 @@ const Status InsertFileScan::insertRecord(const Record &rec, RID &outRid) {
 
   // if it fits in current page, we are done
   if (curPage->insertRecord(rec, outRid) == OK) {
+    // current page is modified
+    // header metadata is also updated
     curDirtyFlag = true;
     headerPage->recCnt++, hdrDirtyFlag = true;
     return OK;
   }
   // invariant: current page is the last page
 
+  // current page does not have enough free space
   // allocate a new page to accommodate the record
   Page *page;
   int pn;
@@ -371,9 +389,10 @@ const Status InsertFileScan::insertRecord(const Record &rec, RID &outRid) {
   curPage->setNextPage(pn), curDirtyFlag = true;
   ERR_RET((status = bufMgr->unPinPage(filePtr, curPageNo, curDirtyFlag)) != OK,
           status, {});
+  // header metadata update
   headerPage->pageCnt++, headerPage->lastPage = pn, hdrDirtyFlag = true;
 
-  // this is now the current page
+  // move on to the newly allotted page, try insert into that page
   curPage = page, curPageNo = pn, curDirtyFlag = false;
   return insertRecord(rec, outRid);
 }
