@@ -1,5 +1,25 @@
+#include <string>
+#include "page.h"
+#include "db.h"
 #include "heapfile.h"
 #include "error.h"
+#include <cstring>
+
+#define ERR_RET(err_cond, res, clean_up)                                       \
+  do                                                                           \
+    if ((err_cond)) {                                                          \
+      clean_up;                                                                \
+      return res;                                                              \
+    }                                                                          \
+  while (0)
+
+// initialize the heap file header for a newly created file
+static inline void initFileHdr(const string &fn, FileHdrPage *hdr, int dataPN) {
+  memcpy(hdr->fileName, fn.c_str(), fn.length() + 1);
+  hdr->recCnt = 0;
+  hdr->pageCnt = 1;
+  hdr->firstPage = hdr->lastPage = dataPN;
+}
 
 // routine to create a heapfile
 const Status createHeapFile(const string fileName) {
@@ -104,8 +124,8 @@ const Status HeapFileScan::startScan(const int offset_, const int length_,
 
   if ((offset_ < 0 || length_ < 1) ||
       (type_ != STRING && type_ != INTEGER && type_ != FLOAT) ||
-      (type_ == INTEGER && length_ != sizeof(int) ||
-       type_ == FLOAT && length_ != sizeof(float)) ||
+      ((type_ == INTEGER && length_ != sizeof(int)) ||
+       (type_ == FLOAT && length_ != sizeof(float))) ||
       (op_ != LT && op_ != LTE && op_ != EQ && op_ != GTE && op_ != GT &&
        op_ != NE)) {
     return BADSCANPARM;
@@ -163,16 +183,66 @@ const Status HeapFileScan::resetScan() {
   return OK;
 }
 
-const Status HeapFileScan::scanNext(RID &outRid) {
-  Status status = OK;
-  RID nextRid;
-  RID tmpRid;
-  int nextPageNo;
-  Record rec;
+static inline bool operator==(const RID &l, const RID &r) {
+  return l.pageNo == r.pageNo && l.slotNo == r.slotNo;
 }
+static inline bool operator!=(const RID &l, const RID &r) { return !(l == r); }
 
-// returns pointer to the current record.  page is left pinned
-// and the scan logic is required to unpin the page
+// @brief: continue linear scan on the heapfile,
+// attempting to find the next record that matches the filtering criterion.
+// @parameter: set outRid to the next matched record id if such record exists
+// @return: OK if we found a matched record,
+// FILEEOF if we cannot find such record before reaching the end of file.
+// @assumption: read/pin/unpin page always success.
+// current page is always pinned if exists.
+const Status HeapFileScan::scanNext(RID &outRid) {
+  outRid = NULLRID;
+  // no page? it must mean that we've reached the end
+  if (curPage == NULL) {
+    return FILEEOF;
+  }
+  // invariant: current page is pinned
+
+  // see if we still have unchecked records on this page
+  bool endOfPage;
+  if (curRec == NULLRID) {
+    endOfPage = (curPage->firstRecord(curRec) != OK);
+  } else {
+    RID nextRid;
+    endOfPage = (curPage->nextRecord(curRec, nextRid) != OK);
+    if (!endOfPage) {
+      curRec = nextRid;
+    }
+  }
+  // try find record on this page
+  while (!endOfPage) {
+    // test the current record
+    Record rec;
+    curPage->getRecord(curRec, rec);
+    if (matchRec(rec)) {
+      outRid = curRec;
+      return OK;
+    }
+    // move on to the next record, if not reaching end of this page
+    RID nextRid;
+    if (curPage->nextRecord(curRec, nextRid) == OK) {
+      curRec = nextRid;
+    } else {
+      endOfPage = true;
+    }
+  }
+  // this page is exhausted, we must go to the next page
+  bufMgr->unPinPage(filePtr, curPageNo, curDirtyFlag);
+  curPage->getNextPage(curPageNo);
+  // switch to the next page: on error, curPage remains NULL
+  // if read success, the page should be pinned
+  curPage = NULL;
+  bufMgr->readPage(filePtr, curPageNo, curPage);
+  curDirtyFlag = false;
+  curRec = NULLRID;
+  // recursively scan the next page
+  return scanNext(outRid);
+}
 
 const Status HeapFileScan::getRecord(Record &rec) {
   return curPage->getRecord(curRec, rec);
@@ -278,16 +348,51 @@ InsertFileScan::~InsertFileScan() {
   }
 }
 
-// Insert a record into the file
+// @brief: Insert a record into a heapfile
+// @parameter:
+// rec: the record data
+// outRid: store the record at at which this record is inserted
+// @return: status
+// OK if insert success
+// UNIXERR if page allocation, page read/write failed
 const Status InsertFileScan::insertRecord(const Record &rec, RID &outRid) {
-  Page *newPage;
-  int newPageNo;
-  Status status, unpinstatus;
-  RID rid;
+  Status status;
+  // by default, we insert record at the end
+  if (curPage == NULL) {
+    curPageNo = headerPage->lastPage;
+    ERR_RET((status = bufMgr->readPage(filePtr, curPageNo, curPage)) != OK,
+            status, {});
+  }
 
   // check for very large records
-  if ((unsigned int)rec.length > PAGESIZE - DPFIXED) {
-    // will never fit on a page, so don't even bother looking
-    return INVALIDRECLEN;
+  // will never fit on a page, so don't even bother looking
+  ERR_RET((unsigned int)rec.length > PAGESIZE - DPFIXED, INVALIDRECLEN, {});
+
+  // if it fits in current page, we are done
+  if (curPage->insertRecord(rec, outRid) == OK) {
+    // current page is modified
+    // header metadata is also updated
+    curDirtyFlag = true;
+    headerPage->recCnt++, hdrDirtyFlag = true;
+    return OK;
   }
+  // invariant: current page is the last page
+
+  // current page does not have enough free space
+  // allocate a new page to accommodate the record
+  Page *page;
+  int pn;
+  ERR_RET((status = bufMgr->allocPage(filePtr, pn, page)) != OK, status, {});
+  page->init(pn);
+
+  // append the new page onto the heap file page linked list
+  curPage->setNextPage(pn), curDirtyFlag = true;
+  ERR_RET((status = bufMgr->unPinPage(filePtr, curPageNo, curDirtyFlag)) != OK,
+          status, {});
+  // header metadata update
+  headerPage->pageCnt++, headerPage->lastPage = pn, hdrDirtyFlag = true;
+
+  // move on to the newly allotted page, try insert into that page
+  curPage = page, curPageNo = pn, curDirtyFlag = false;
+  return insertRecord(rec, outRid);
 }
