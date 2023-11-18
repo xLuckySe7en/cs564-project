@@ -45,6 +45,7 @@ HeapFile::HeapFile(const string &fileName, Status &returnStatus) {
   if ((status = filePtr->getFirstPage(headerPageNo)) != OK) {
     cerr << "could not get first page of file\n";
     returnStatus = status;
+    db.closeFile(filePtr); // close file if we cannot read the header page
     return;
   }
   // read and pin the header page into the buffer pool
@@ -55,12 +56,7 @@ HeapFile::HeapFile(const string &fileName, Status &returnStatus) {
   }
   // be sure to properly set the private header page variable
   headerPage = (FileHdrPage *)pagePtr;
-  // start working on getting the first data page of the file
-  if ((status = pagePtr->getNextPage(curPageNo)) != OK) {
-    cerr << "could not get next page after header page\n";
-    returnStatus = status;
-    return;
-  }
+  curPageNo = headerPage->firstPage;
   // read and pin the first data page of the file to the buffer pool
   if ((status = bufMgr->readPage(filePtr, curPageNo, pagePtr)) != OK) {
     cerr << "could not get read header page into buffer manager\n";
