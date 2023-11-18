@@ -25,20 +25,54 @@ const Status destroyHeapFile(const string fileName) {
 }
 
 // constructor opens the underlying file
+// reads and pins the header page in the buffer pool
+// and then also reads and pins the first datapage
+// into the buffer pool, setting curRec to NULLRID
+// and initializing the hdrPageNo and curPageNo respectively
+// Finally, sets the dirty flags which are false to begin with
 HeapFile::HeapFile(const string &fileName, Status &returnStatus) {
   Status status;
   Page *pagePtr;
 
   cout << "opening file " << fileName << endl;
-
   // open the file and read in the header page and the first data page
-  if ((status = db.openFile(fileName, filePtr)) == OK) {
-
-  } else {
+  if ((status = db.openFile(fileName, filePtr)) != OK) {
     cerr << "open of heap file failed\n";
     returnStatus = status;
     return;
   }
+  // get the header page (first page) from the file
+  if ((status = filePtr->getFirstPage(headerPageNo)) != OK) {
+    cerr << "could not get first page of file\n";
+    returnStatus = status;
+    return;
+  }
+  // read and pin the header page into the buffer pool
+  if ((status = bufMgr->readPage(filePtr, headerPageNo, pagePtr)) != OK) {
+    cerr << "could not get read header page into buffer manager\n";
+    returnStatus = status;
+    return;
+  }
+  // be sure to properly set the private header page variable
+  headerPage = (FileHdrPage *)pagePtr;
+  // start working on getting the first data page of the file
+  if ((status = pagePtr->getNextPage(curPageNo)) != OK) {
+    cerr << "could not get next page after header page\n";
+    returnStatus = status;
+    return;
+  }
+  // read and pin the first data page of the file to the buffer pool
+  if ((status = bufMgr->readPage(filePtr, curPageNo, pagePtr)) != OK) {
+    cerr << "could not get read header page into buffer manager\n";
+    returnStatus = status;
+    return;
+  }
+  curRec = NULLRID;
+  curPage = pagePtr;
+  curDirtyFlag = false;
+  hdrDirtyFlag = false;
+  cout << "current page no: " << curPageNo
+       << "; header page no: " << headerPageNo << endl;
 }
 
 // the destructor closes the file
