@@ -73,7 +73,12 @@ const Status createHeapFile(const string fileName) {
     if (status != OK)
       return status;
 
-    return bufMgr->unPinPage(file, firstDataPageNo, true);
+    // uhpin the data page, which is also dirty
+    status = bufMgr->unPinPage(file, firstDataPageNo, true);
+    if (status != OK)
+      return status;
+	// close the file
+    return db.closeFile(file);
   }
 
   return FILEEXISTS;
