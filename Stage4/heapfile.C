@@ -129,6 +129,7 @@ HeapFile::HeapFile(const string &fileName, Status &returnStatus) {
   hdrDirtyFlag = false;
   cout << "current page no: " << curPageNo
        << "; header page no: " << headerPageNo << endl;
+  returnStatus = OK;
 }
 
 // the destructor closes the file
