@@ -1,0 +1,98 @@
+Testing the relation interface
+
+db.destroy. unlink returned error
+
+insert 10120 records into dummy.02
+
+Start an insert scan which will have the side effect of opening dummy.02 
+opening file dummy.02
+invoking heapfile destructor on file dummy.02
+inserted 10120 records into file dummy.02 successfully
+
+
+pull 11th record from file dummy.02 using file->getRecord() 
+opening file dummy.02
+getRecord() tests passed successfully
+invoking heapfile destructor on file dummy.02
+scan file dummy.02 
+opening file dummy.02
+scan file1 saw 10120 records 
+invoking heapfile destructor on file dummy.02
+
+scan file dummy.02 
+opening file dummy.02
+scan file1 saw 10120 records 
+invoking heapfile destructor on file dummy.02
+
+pull every 7th record from file dummy.02 using file->getRecord() 
+opening file dummy.02
+getRecord() tests passed successfully
+invoking heapfile destructor on file dummy.02
+
+scan file deleting all records whose i field is odd
+opening file dummy.02
+deleted 5060 records
+invoking heapfile destructor on file dummy.02
+
+scan file, counting number of remaining records
+opening file dummy.02
+invoking heapfile destructor on file dummy.02
+opening file dummy.02
+invoking heapfile destructor on file dummy.02
+scan saw 5060 records 
+opening file dummy.03
+
+insert 10120 variable-size records into dummy.03
+inserted 10120 variable sized records successfully into dummy.03
+smallest record was 10 bytes, largest was 71 bytes
+invoking heapfile destructor on file dummy.03
+
+scan dummy.03 using the predicate < num/2 
+opening file dummy.03
+scan of dummy.03 saw 5060 records 
+invoking heapfile destructor on file dummy.03
+
+Next attempt two concurrent scans on dummy.03 
+opening file dummy.03
+opening file dummy.03
+scan file1 saw 15180 records 
+invoking heapfile destructor on file dummy.03
+invoking heapfile destructor on file dummy.03
+
+Destroy dummy.03
+opening file dummy.04
+inserting 10120 records into dummy1
+invoking heapfile destructor on file dummy.04
+
+now scan dummy.04, deleting records with keys between 1000 and 2000
+opening file dummy.04
+scan file1 saw 10120 records 
+number of records deleted by scan 1000
+
+invoking heapfile destructor on file dummy.04
+opening file dummy.04
+should have seen 1000 fewer records after deletions
+saw 9120records
+invoking heapfile destructor on file dummy.04
+opening file dummy.04
+
+Filtered scan matching i field GTE than 7590
+scan file1 saw 2530 records 
+invoking heapfile destructor on file dummy.04
+opening file dummy.04
+
+Filtered scan matching f field GT than 9108
+scan file1 saw 1011 records 
+invoking heapfile destructor on file dummy.04
+opening file dummy.04
+invoking heapfile destructor on file dummy.04
+opening file dummy.04
+
+passed BADSCANPARAM test
+opening file dummy.04
+
+passed large record insert test
+invoking heapfile destructor on file dummy.04
+invoking heapfile destructor on file dummy.04
+
+Done testing.
