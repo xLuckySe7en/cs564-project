@@ -132,8 +132,8 @@ HeapFile::HeapFile(const string &fileName, Status &returnStatus) {
   curPage = pagePtr;
   curDirtyFlag = false;
   hdrDirtyFlag = false;
-  cout << "current page no: " << curPageNo
-       << "; header page no: " << headerPageNo << endl;
+  // cout << "current page no: " << curPageNo
+  //      << "; header page no: " << headerPageNo << endl;
   returnStatus = OK;
 }
 
