@@ -21,9 +21,16 @@ const Status QU_Delete(const string & relation,
         return status; // Error in opening the file
     }
 
-    // Assuming offset and length are determined based on the attrName
-    int offset = /* offset of attrName in relation */;
-    int length = /* length of attribute type */;
+    // Retrieve attribute information
+    AttrDesc attrDesc;
+    status = attrCat->getInfo(relation, attrName, attrDesc);
+    if (status != OK) {
+        delete hfs;
+        return status; // Error in fetching attribute information
+    }
+
+    int offset = attrDesc.attrOffset;
+    int length = attrDesc.attrLen;
 
     // Start scan with filter
     status = hfs->startScan(offset, length, type, attrValue, op);
