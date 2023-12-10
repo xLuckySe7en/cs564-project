@@ -21,46 +21,82 @@ const Status QU_Delete(const string & relation,
         return status; // Error in opening the file
     }
 
-    // Retrieve attribute information
-    AttrDesc attrDesc;
-    status = attrCat->getInfo(relation, attrName, attrDesc);
-    if (status != OK) {
-        delete hfs;
-        return status; // Error in fetching attribute information
-    }
-
-    int offset = attrDesc.attrOffset;
-    int length = attrDesc.attrLen;
-
-    // Start scan with filter
-    status = hfs->startScan(offset, length, type, attrValue, op);
-    if (status != OK) {
-        delete hfs;
-        return status; // Error in starting the scan
-    }
-
-    RID outRid;
-    Record rec;
-    while ((status = hfs->scanNext(outRid)) == OK) {
-        status = hfs->getRecord(rec);
+    if (!attrName.empty() && attrValue != nullptr) {
+        // Retrieve attribute information
+        AttrDesc attrDesc;
+        status = attrCat->getInfo(relation, attrName, attrDesc);
         if (status != OK) {
-            break; // Error in getting record
+            delete hfs;
+            return status; // Error in fetching attribute information
         }
 
-        status = hfs->deleteRecord();
+        int offset = attrDesc.attrOffset;
+        int length = attrDesc.attrLen;
+
+        // Prepare the value for scanning
+        void* valPtr;
+        int intVal;
+        float floatVal;
+        switch(type) {
+            case INTEGER:
+                intVal = atoi(attrValue);
+                valPtr = &intVal;
+                break;
+            case FLOAT:
+                floatVal = atof(attrValue);
+                valPtr = &floatVal;
+                break;
+            case STRING:
+                valPtr = (void*)attrValue;
+                break;
+            // handle other types if necessary
+        }
+
+        // Start scan with filter
+        status = hfs->startScan(offset, length, type, reinterpret_cast<const char*>(valPtr), op);
         if (status != OK) {
-            break; // Error in deleting record
+            delete hfs;
+            return status; // Error in starting the scan
+        }
+
+        RID outRid;
+        Record rec;
+        while ((status = hfs->scanNext(outRid)) == OK) {
+            status = hfs->getRecord(rec);
+            if (status != OK) {
+                break; // Error in getting record
+            }
+
+            status = hfs->deleteRecord();
+            if (status != OK) {
+                break; // Error in deleting record
+            }
+        }
+    } else {
+        // Handle deletion of all records
+        status = hfs->startScan(0, 0, type, nullptr, op);
+        if (status != OK) {
+            delete hfs;
+            return status;
+        }
+
+        RID outRid;
+        while ((status = hfs->scanNext(outRid)) == OK) {
+            status = hfs->deleteRecord();
+            if (status != OK) {
+                break;
+            }
         }
     }
 
-    // Check if loop exited due to scan completion or an error
+    // Clean up
     if (status != FILEEOF) {
-        hfs->endScan(); // Ensure endScan is called
+        hfs->endScan();
         delete hfs;
-        return status; // Return encountered error
+        return status;
     }
 
     status = hfs->endScan();
     delete hfs;
-    return status; // OK or error from endScan
+    return status;
 }
