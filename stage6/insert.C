@@ -91,8 +91,8 @@ const Status QU_Insert(const string &relation, const int attrCnt,
       break;
     default:
       // a character* doesn't need to be cast, we can just copy its bytes
-      strlcpy(outData + offset, (char *)CorrectOrder[i].attrValue,
-              attrs[i].attrLen);
+      strncpy(outData + offset, (char *)CorrectOrder[i].attrValue,
+              attrs[i].attrLen - 1);
     }
     // to not overwrite previously copied data in outdata
     offset += attrs[i].attrLen;
