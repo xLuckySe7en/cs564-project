@@ -46,6 +46,7 @@ void order_attributes(attrInfo CorrectOrder[], int attrCnt, const attrInfo attrL
  */
 const Status QU_Insert(const string &relation, const int attrCnt,
                        const attrInfo attrList[]) {
+  cout << "Doing QU_Insert " << endl;
   // part 6
   Status st = OK;
   AttrDesc *attrs;
