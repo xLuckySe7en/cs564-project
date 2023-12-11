@@ -1,0 +1,187 @@
+Welcome to Minirel
+    Using Nested Loops Join Method
+
+>>> create soaps (soapid = int, name = char(28), network = char(4), rating = real);
+Creating relation soaps
+
+>>> load soaps("../data/soaps.data");
+Number of records inserted: 9
+
+>>> create stars (starid = int, real_name = char(20), plays = char(12), soapid = int);
+Creating relation stars
+
+>>> load stars("../data/stars.data");
+Number of records inserted: 29
+
+>>> select (soaps.soapid, soaps.name, soaps.network, soaps.rating);
+Creating relation Tmp_Minirel_Result
+Doing QU_Select 
+Doing HeapFileScan Selection using ScanSelect()
+Relation name: Tmp_Minirel_Result
+
+soapid name                 network rating 
+------  --------------------  -------  ------  
+0       Days of Our Lives     NBC      7.02    
+1       General Hospital      ABC      9.81    
+2       Guiding Light         CBS      4.02    
+3       One Life to Live      ABC      2.31    
+4       Santa Barbara         NBC      6.44    
+5       The Young and the Re  CBS      5.50    
+6       As the World Turns    CBS      7.00    
+7       Another World         NBC      1.97    
+8       All My Children       ABC      8.82    
+
+Number of records: 9
+
+>>> print soaps;
+Relation name: soaps
+
+soapid name                 network rating 
+------  --------------------  -------  ------  
+0       Days of Our Lives     NBC      7.02    
+1       General Hospital      ABC      9.81    
+2       Guiding Light         CBS      4.02    
+3       One Life to Live      ABC      2.31    
+4       Santa Barbara         NBC      6.44    
+5       The Young and the Re  CBS      5.50    
+6       As the World Turns    CBS      7.00    
+7       Another World         NBC      1.97    
+8       All My Children       ABC      8.82    
+
+Number of records: 9
+
+>>> select (soaps.name, soaps.rating, soaps.network) where soaps.network = "NBC";
+Creating relation Tmp_Minirel_Result
+Doing QU_Select 
+Doing HeapFileScan Selection using ScanSelect()
+Relation name: Tmp_Minirel_Result
+
+name                 rating network 
+--------------------  ------  -------  
+Days of Our Lives     7.02    NBC      
+Santa Barbara         6.44    NBC      
+Another World         1.97    NBC      
+
+Number of records: 3
+
+>>> select (stars.plays, stars.real_name, stars.starid) where stars.starid < 12;
+Creating relation Tmp_Minirel_Result
+Doing QU_Select 
+Doing HeapFileScan Selection using ScanSelect()
+Relation name: Tmp_Minirel_Result
+
+plays        real_name            starid 
+------------  --------------------  ------  
+Kim           Hayes, Kathryn        0       
+Andy          DeFreitas, Scott      1       
+Julia         Grahn, Nancy          2       
+Esther        Linder, Kate          3       
+Katherine     Cooper, Jeanne        4       
+Harley        Ehlers, Beth          5       
+Keith         Novak, John           6       
+Renee         Elliot, Patricia      7       
+Gabrielle     Hutchinson, Fiona     8       
+Asa           Carey, Phil           9       
+Max           Walker, Nicholas      10      
+Eve           Ross, Charlotte       11      
+
+Number of records: 12
+
+>>> select (soaps.rating, soaps.network, soaps.name) where soaps.rating >= 5.000000;
+Creating relation Tmp_Minirel_Result
+Doing QU_Select 
+Doing HeapFileScan Selection using ScanSelect()
+Relation name: Tmp_Minirel_Result
+
+rating network name                 
+------  -------  --------------------  
+7.02    NBC      Days of Our Lives     
+9.81    ABC      General Hospital      
+6.44    NBC      Santa Barbara         
+5.50    CBS      The Young and the Re  
+7.00    CBS      As the World Turns    
+8.82    ABC      All My Children       
+
+Number of records: 6
+
+>>> select (stars.real_name, stars.starid) where stars.starid > 567;
+Creating relation Tmp_Minirel_Result
+Doing QU_Select 
+Doing HeapFileScan Selection using ScanSelect()
+Relation name: Tmp_Minirel_Result
+
+real_name            starid 
+--------------------  ------  
+
+Number of records: 0
+
+>>> select into ned (soaps.network, soaps.soapid, soaps.name) where soaps.network = "CBS";
+Creating relation ned
+Doing QU_Select 
+Doing HeapFileScan Selection using ScanSelect()
+
+>>> print ned;
+Relation name: ned
+
+network soapid name                 
+-------  ------  --------------------  
+CBS      2       Guiding Light         
+CBS      5       The Young and the Re  
+CBS      6       As the World Turns    
+
+Number of records: 3
+
+>>> select into ned (soaps.network, soaps.soapid, soaps.name) where soaps.network = "NBC";
+Doing QU_Select 
+Doing HeapFileScan Selection using ScanSelect()
+
+>>> print ned;
+Relation name: ned
+
+network soapid name                 
+-------  ------  --------------------  
+CBS      2       Guiding Light         
+CBS      5       The Young and the Re  
+CBS      6       As the World Turns    
+NBC      0       Days of Our Lives     
+NBC      4       Santa Barbara         
+NBC      7       Another World         
+
+Number of records: 6
+
+>>> create ted (plays = char(12), soapid = int);
+Creating relation ted
+
+>>> select into ted (stars.plays, stars.soapid) where stars.plays < "L";
+Doing QU_Select 
+Doing HeapFileScan Selection using ScanSelect()
+
+>>> print ted;
+Relation name: ted
+
+plays        soapid 
+------------  ------  
+Kim           6       
+Andy          6       
+Julia         4       
+Esther        5       
+Katherine     5       
+Harley        2       
+Keith         4       
+Gabrielle     5       
+Asa           5       
+Eve           0       
+John          5       
+Fletcher      2       
+Jack          0       
+Keith         4       
+Denise        7       
+Brooke        8       
+Brian         8       
+Anna          1       
+Jenny         1       
+Kayla         0       
+
+Number of records: 20
+
+>>> 

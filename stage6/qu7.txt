@@ -1,0 +1,154 @@
+Welcome to Minirel
+    Using Nested Loops Join Method
+
+>>> create soaps (soapid = int, name = char(28), network = char(4), rating = real);
+Creating relation soaps
+
+>>> load soaps("../data/soaps.data");
+Number of records inserted: 9
+
+>>> create stars (starid = int, real_name = char(20), plays = char(12), soapid = int);
+Creating relation stars
+
+>>> load stars("../data/stars.data");
+Number of records inserted: 29
+
+>>> print stars;
+Relation name: stars
+
+starid real_name            plays        soapid 
+------  --------------------  ------------  ------  
+0       Hayes, Kathryn        Kim           6       
+1       DeFreitas, Scott      Andy          6       
+2       Grahn, Nancy          Julia         4       
+3       Linder, Kate          Esther        5       
+4       Cooper, Jeanne        Katherine     5       
+5       Ehlers, Beth          Harley        2       
+6       Novak, John           Keith         4       
+7       Elliot, Patricia      Renee         3       
+8       Hutchinson, Fiona     Gabrielle     5       
+9       Carey, Phil           Asa           5       
+10      Walker, Nicholas      Max           3       
+11      Ross, Charlotte       Eve           0       
+12      Anthony, Eugene       Stan          8       
+13      Douglas, Jerry        John          5       
+14      Holbrook, Anna        Sharlene      7       
+15      Hammer, Jay           Fletcher      2       
+16      Sloan, Tina           Lillian       2       
+17      DuClos, Danielle      Lisa          3       
+18      Tuck, Jessica         Megan         3       
+19      Ashford, Matthew      Jack          0       
+20      Novak, John           Keith         4       
+21      Larson, Jill          Opal          8       
+22      McKinnon, Mary        Denise        7       
+23      Barr, Julia           Brooke        8       
+24      Borlenghi, Matt       Brian         8       
+25      Hughes, Finola        Anna          1       
+26      Rogers, Tristan       Robert        1       
+27      Richardson, Cheryl    Jenny         1       
+28      Evans, Mary Beth      Kayla         0       
+
+Number of records: 29
+
+>>> delete stars where stars.plays = "Lisa";
+Doing QU_Delete 
+
+>>> delete stars where stars.real_name = "Anthony, Eugene";
+Doing QU_Delete 
+
+>>> print stars;
+Relation name: stars
+
+starid real_name            plays        soapid 
+------  --------------------  ------------  ------  
+0       Hayes, Kathryn        Kim           6       
+1       DeFreitas, Scott      Andy          6       
+2       Grahn, Nancy          Julia         4       
+3       Linder, Kate          Esther        5       
+4       Cooper, Jeanne        Katherine     5       
+5       Ehlers, Beth          Harley        2       
+6       Novak, John           Keith         4       
+7       Elliot, Patricia      Renee         3       
+8       Hutchinson, Fiona     Gabrielle     5       
+9       Carey, Phil           Asa           5       
+10      Walker, Nicholas      Max           3       
+11      Ross, Charlotte       Eve           0       
+13      Douglas, Jerry        John          5       
+14      Holbrook, Anna        Sharlene      7       
+15      Hammer, Jay           Fletcher      2       
+16      Sloan, Tina           Lillian       2       
+18      Tuck, Jessica         Megan         3       
+19      Ashford, Matthew      Jack          0       
+20      Novak, John           Keith         4       
+21      Larson, Jill          Opal          8       
+22      McKinnon, Mary        Denise        7       
+23      Barr, Julia           Brooke        8       
+24      Borlenghi, Matt       Brian         8       
+25      Hughes, Finola        Anna          1       
+26      Rogers, Tristan       Robert        1       
+27      Richardson, Cheryl    Jenny         1       
+28      Evans, Mary Beth      Kayla         0       
+
+Number of records: 27
+
+>>> delete stars where stars.soapid = 1;
+Doing QU_Delete 
+
+>>> print stars;
+Relation name: stars
+
+starid real_name            plays        soapid 
+------  --------------------  ------------  ------  
+0       Hayes, Kathryn        Kim           6       
+1       DeFreitas, Scott      Andy          6       
+2       Grahn, Nancy          Julia         4       
+3       Linder, Kate          Esther        5       
+4       Cooper, Jeanne        Katherine     5       
+5       Ehlers, Beth          Harley        2       
+6       Novak, John           Keith         4       
+7       Elliot, Patricia      Renee         3       
+8       Hutchinson, Fiona     Gabrielle     5       
+9       Carey, Phil           Asa           5       
+10      Walker, Nicholas      Max           3       
+11      Ross, Charlotte       Eve           0       
+13      Douglas, Jerry        John          5       
+14      Holbrook, Anna        Sharlene      7       
+15      Hammer, Jay           Fletcher      2       
+16      Sloan, Tina           Lillian       2       
+18      Tuck, Jessica         Megan         3       
+19      Ashford, Matthew      Jack          0       
+20      Novak, John           Keith         4       
+21      Larson, Jill          Opal          8       
+22      McKinnon, Mary        Denise        7       
+23      Barr, Julia           Brooke        8       
+24      Borlenghi, Matt       Brian         8       
+28      Evans, Mary Beth      Kayla         0       
+
+Number of records: 24
+
+>>> delete stars;
+Doing QU_Delete 
+
+>>> print stars;
+Relation name: stars
+
+starid real_name            plays        soapid 
+------  --------------------  ------------  ------  
+
+Number of records: 0
+
+>>> delete soaps where soaps.network < "NBC";
+Doing QU_Delete 
+
+>>> print soaps;
+Relation name: soaps
+
+soapid name                 network rating 
+------  --------------------  -------  ------  
+0       Days of Our Lives     NBC      7.02    
+4       Santa Barbara         NBC      6.44    
+7       Another World         NBC      1.97    
+
+Number of records: 3
+
+>>> 
