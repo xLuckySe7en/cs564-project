@@ -19,6 +19,9 @@ const Status QU_Delete(const string &relation, const string &attrName,
     return status; // Error in opening the file
   }
 
+  void *valPtr;
+  int intVal;
+  float floatVal;
   if (!attrName.empty() && attrValue != nullptr) {
     // Retrieve attribute information
     AttrDesc attrDesc;
@@ -32,9 +35,6 @@ const Status QU_Delete(const string &relation, const string &attrName,
     int length = attrDesc.attrLen;
 
     // Prepare the value for scanning
-    void *valPtr;
-    int intVal;
-    float floatVal;
     switch (type) {
     case INTEGER:
       intVal = atoi(attrValue);
@@ -57,20 +57,6 @@ const Status QU_Delete(const string &relation, const string &attrName,
       delete hfs;
       return status; // Error in starting the scan
     }
-
-    RID outRid;
-    Record rec;
-    while ((status = hfs->scanNext(outRid)) == OK) {
-      status = hfs->getRecord(rec);
-      if (status != OK) {
-        break; // Error in getting record
-      }
-
-      status = hfs->deleteRecord();
-      if (status != OK) {
-        break; // Error in deleting record
-      }
-    }
   } else {
     // Handle deletion of all records
     status = hfs->startScan(0, 0, type, nullptr, op);
@@ -78,21 +64,11 @@ const Status QU_Delete(const string &relation, const string &attrName,
       delete hfs;
       return status;
     }
-
-    RID outRid;
-    while ((status = hfs->scanNext(outRid)) == OK) {
-      status = hfs->deleteRecord();
-      if (status != OK) {
-        break;
-      }
-    }
   }
 
-  // Clean up
-  if (status != FILEEOF) {
-    hfs->endScan();
-    delete hfs;
-    return status;
+  RID outRid;
+  while ((status = hfs->scanNext(outRid)) == OK) {
+    hfs->deleteRecord();
   }
 
   status = hfs->endScan();

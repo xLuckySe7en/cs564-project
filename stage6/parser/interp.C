@@ -279,7 +279,7 @@ void interp(NODE *n) {
                          (Operator)temp->u.SELECT.op, tmpValue);
 
       delete[] tmpValue;
-      delete[] attr1.attrValue;
+      delete[] (char *)attr1.attrValue;
 
       if (errval != OK)
         error.print((Status)errval);
@@ -432,7 +432,7 @@ void interp(NODE *n) {
     errval = QU_Insert(n->u.INSERT.relname, nattrs, attrList);
 
     for (acnt = 0; acnt < nattrs; acnt++)
-      delete[] attrList[acnt].attrValue;
+      delete[] (char *)attrList[acnt].attrValue;
 
     if (errval != OK)
       error.print((Status)errval);
@@ -486,7 +486,7 @@ void interp(NODE *n) {
       errval = QU_Delete(n->u.DELETE.relname, "", (Operator)op, (Datatype)type,
                          (char *)value);
 
-    delete[] value;
+    delete[] (char *)value;
 
     if (errval != OK)
       error.print((Status)errval);

@@ -82,8 +82,8 @@ const Status RelCatalog::removeInfo(const string &relation) {
   if (status == OK)
     status = hfs->deleteRecord();
 
-  delete hfs;
   hfs->endScan();
+  delete hfs;
   if (status == NORECORDS)
     return OK;
   else
